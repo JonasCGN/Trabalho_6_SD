@@ -1,0 +1,69 @@
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: admin
+      RABBITMQ_DEFAULT_PASS: admin123
+    # RabbitMQ será configurado automaticamente pelos aplicativos Java
+    networks:
+      - sistema-ia-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  gerador-mensagens:
+    build: ./gerador-mensagens
+    container_name: gerador-mensagens
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin123
+    networks:
+      - sistema-ia-network
+    volumes:
+      - ./imagens-teste:/app/imagens-teste
+
+  consumidor-sentimento:
+    build: ./consumidor-sentimento
+    container_name: consumidor-sentimento
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin123
+    networks:
+      - sistema-ia-network
+
+  consumidor-times:
+    build: ./consumidor-times
+    container_name: consumidor-times
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: admin
+      RABBITMQ_PASS: admin123
+    networks:
+      - sistema-ia-network
+
+networks:
+  sistema-ia-network:
+    driver: bridge
+
+volumes:
+  rabbitmq-data:
