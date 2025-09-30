@@ -134,7 +134,7 @@ public class Main {
 
                 INDArray output = model.output(input);
                 int predictedClass = Nd4j.argMax(output, 1).getInt(0);
-                String[] classes = {"triste", "feliz"};
+                String[] classes = {"feliz", "triste"};
                 String predictedLabel = classes[predictedClass];
                 double confidence = output.getDouble(0, predictedClass);
 
