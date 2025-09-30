@@ -1,16 +1,12 @@
-FROM openjdk:11-jdk-slim
-
+FROM maven:3.9.3-eclipse-temurin-11 AS build
 WORKDIR /app
-
-# Instalar Maven para build
-RUN apt-get update && apt-get install -y maven && rm -rf /var/lib/apt/lists/*
-
-# Copiar arquivos do projeto
 COPY pom.xml .
-COPY src ./src
-
-# Compilar o projeto
+COPY Main.java ./src/main/java/com/exemplo/Main.java
 RUN mvn clean package -DskipTests
 
-# Executar a aplicação
-CMD ["java", "-jar", "target/consumidor-sentimento-1.0-SNAPSHOT.jar"]
+FROM openjdk:11-jdk-slim
+WORKDIR /app
+COPY --from=build /app/target/face-consumer-1.0.jar ./face-consumer.jar
+COPY model.h5 .
+EXPOSE 8000
+CMD ["java", "-jar", "face-consumer.jar"]

@@ -1,65 +1,54 @@
+x-rabbitmq-config: &rabbitmq-config
+  RABBITMQ_HOST: rabbitmq
+  RABBITMQ_PORT: 5672
+  RABBITMQ_USER: ${RABBITMQ_USER:-admin}
+  RABBITMQ_PASS: ${RABBITMQ_PASS:-admin123}
+
+x-common-service: &common-service
+  depends_on:
+    rabbitmq:
+      condition: service_healthy
+  environment:
+    <<: *rabbitmq-config
+  networks:
+    - sistema-ia-network
+  restart: unless-stopped
+
 services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
     ports:
-      - "5672:5672"
-      - "15672:15672"
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MGMT_PORT:-15672}:15672"
     environment:
-      RABBITMQ_DEFAULT_USER: admin
-      RABBITMQ_DEFAULT_PASS: admin123
-    # RabbitMQ será configurado automaticamente pelos aplicativos Java
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-admin}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASS:-admin123}
     networks:
       - sistema-ia-network
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
     healthcheck:
       test: ["CMD", "rabbitmq-diagnostics", "ping"]
       interval: 30s
       timeout: 10s
       retries: 3
+    restart: unless-stopped
 
   gerador-mensagens:
+    <<: *common-service
     build: ./gerador-mensagens
     container_name: gerador-mensagens
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: admin123
-    networks:
-      - sistema-ia-network
-    volumes:
-      - ./imagens-teste:/app/imagens-teste
 
   consumidor-sentimento:
+    <<: *common-service
     build: ./consumidor-sentimento
     container_name: consumidor-sentimento
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: admin123
-    networks:
-      - sistema-ia-network
 
-  consumidor-times:
-    build: ./consumidor-times
-    container_name: consumidor-times
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      RABBITMQ_HOST: rabbitmq
-      RABBITMQ_PORT: 5672
-      RABBITMQ_USER: admin
-      RABBITMQ_PASS: admin123
-    networks:
-      - sistema-ia-network
+  # consumidor-times:
+  #   <<: *common-service
+  #   build: ./consumidor-times
+  #   container_name: consumidor-times
 
 networks:
   sistema-ia-network:
