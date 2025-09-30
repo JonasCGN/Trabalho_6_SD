@@ -120,8 +120,6 @@ public class Main {
 
         public Result analyze(byte[] imageBytes) {
             try {
-                Thread.sleep(5000);
-
                 BufferedImage img = ImageIO.read(new ByteArrayInputStream(imageBytes));
                 BufferedImage resized = new BufferedImage(48, 48, BufferedImage.TYPE_BYTE_GRAY);
                 resized.getGraphics().drawImage(img, 0, 0, 48, 48, null);

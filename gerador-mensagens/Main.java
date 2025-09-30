@@ -51,15 +51,15 @@ class Main {
         channel.queueDeclare("face_queue", true, false, false, null);
         channel.queueBind("face_queue", EXCHANGE_NAME, "face");
 
-        channel.queueDeclare("football_queue", true, false, false, null);
-        channel.queueBind("football_queue", EXCHANGE_NAME, "football");
+        channel.queueDeclare("team_queue", true, false, false, null);
+        channel.queueBind("team_queue", EXCHANGE_NAME, "team");
 
         System.out.println("Conectado ao RabbitMQ em: " + host);
     }
 
     public void loadImages() throws IOException {
-        loadDirImagesRecursive(FACES_DIR, faceImages, ".jpg");
-        loadDirImagesRecursive(FOOTBALL_DIR, footballImages, ".png"); // ou ".jpg" se seu dataset usar jpg
+        loadDirImagesRecursive(FACES_DIR, faceImages, Arrays.asList(".jpg", ".png"));
+        loadDirImagesRecursive(FOOTBALL_DIR, footballImages, Arrays.asList(".jpg", ".png"));
 
         if (faceImages.isEmpty() && footballImages.isEmpty()) {
             throw new IOException("Nenhuma imagem encontrada nos diretórios.");
@@ -69,12 +69,12 @@ class Main {
         System.out.println("✅ Carregadas " + footballImages.size() + " imagens de futebol");
     }
 
-    private void loadDirImagesRecursive(String dir, List<Path> list, String ext) throws IOException {
+    private void loadDirImagesRecursive(String dir, List<Path> list, List<String> exts) throws IOException {
         Path path = Paths.get(dir);
         if (Files.exists(path) && Files.isDirectory(path)) {
-            Files.walk(path)  // percorre recursivamente todas as subpastas
+            Files.walk(path)
                  .filter(Files::isRegularFile)
-                 .filter(p -> p.getFileName().toString().toLowerCase().endsWith(ext))
+                 .filter(p -> exts.stream().anyMatch(ext -> p.getFileName().toString().toLowerCase().endsWith(ext)))
                  .forEach(list::add);
         }
     }
@@ -83,29 +83,36 @@ class Main {
         System.out.println("Iniciando envio de mensagens...");
         while (true) {
             try {
-                MensagemImagem msg;
-                if (random.nextBoolean() && !faceImages.isEmpty()) {
-                    msg = createMessage(faceImages, "face");
-                } else if (!footballImages.isEmpty()) {
-                    msg = createMessage(footballImages, "football");
-                } else {
-                    continue; // nenhuma imagem disponível
+                // Thread.sleep(500);
+
+                if (!faceImages.isEmpty()) {
+                    MensagemImagem faceMsg = createMessage(faceImages, "face");
+                    channel.basicPublish(EXCHANGE_NAME, "face",
+                            MessageProperties.PERSISTENT_TEXT_PLAIN,
+                            objectMapper.writeValueAsBytes(faceMsg));
+                    // printStatus(faceMsg);
                 }
 
-                String json = objectMapper.writeValueAsString(msg);
-                channel.basicPublish(EXCHANGE_NAME, msg.getType(),
-                                     MessageProperties.PERSISTENT_TEXT_PLAIN, json.getBytes("UTF-8"));
-
-                long count = messagesSent.incrementAndGet();
-                if (count % 10 == 0) {
-                    double tamanhoKB = msg.getImageData().length / 1024.0;
-                    System.out.printf("Mensagens enviadas: %d - %s (%.1fKB)\n", count, msg.getFileName(), tamanhoKB);
+                if (!footballImages.isEmpty()) {
+                    MensagemImagem teamMsg = createMessage(footballImages, "team");
+                    channel.basicPublish(EXCHANGE_NAME, "team",
+                            MessageProperties.PERSISTENT_TEXT_PLAIN,
+                            objectMapper.writeValueAsBytes(teamMsg));
+                    // printStatus(teamMsg);
                 }
 
             } catch (Exception e) {
                 System.err.println("Erro ao enviar mensagem: " + e.getMessage());
                 try { Thread.sleep(1000); } catch (InterruptedException ignored) {}
             }
+        }
+    }
+
+    private void printStatus(MensagemImagem msg) {
+        long count = messagesSent.incrementAndGet();
+        if (count % 10 == 0) {
+            double tamanhoKB = msg.getImageData().length / 1024.0;
+            System.out.printf("Mensagens enviadas: %d - %s (%.1fKB)\n", count, msg.getFileName(), tamanhoKB);
         }
     }
 
@@ -116,7 +123,7 @@ class Main {
         msg.setTimestamp(System.currentTimeMillis());
 
         Path imgPath = images.get(random.nextInt(images.size()));
-        msg.setFileName(imgPath.getFileName().toString());
+        msg.setFileName(imgPath.toAbsolutePath().toString());
 
         try {
             msg.setImageData(Files.readAllBytes(imgPath));
@@ -163,16 +170,5 @@ class Main {
         public void setTimestamp(long timestamp) { this.timestamp = timestamp; }
         public byte[] getImageData() { return imageData; }
         public void setImageData(byte[] imageData) { this.imageData = imageData; }
-
-        @Override
-        public String toString() {
-            return "MensagemImagem{" +
-                    "id='" + id + '\'' +
-                    ", type='" + type + '\'' +
-                    ", fileName='" + fileName + '\'' +
-                    ", timestamp=" + timestamp +
-                    ", tamanhoImagem=" + (imageData != null ? imageData.length : 0) +
-                    '}';
-        }
     }
 }
