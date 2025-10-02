@@ -1,3 +1,74 @@
+# Trabalho 6 - Sistemas Distribuídos (análise de imagens)
+
+Este repositório contém um exemplo didático de um sistema distribuído utilizando Java, Docker e RabbitMQ.
+O projeto possui um gerador de mensagens e dois consumidores que processam imagens (rostos e brasões de times).
+
+IMPORTANTE: o README foi atualizado para refletir a estrutura atual do repositório — referências a scripts ou arquivos inexistentes foram removidas.
+
+## Serviços (definidos em `docker-compose.yml`)
+
+- `rabbitmq` — RabbitMQ com painel de administração (imagem: `rabbitmq:3-management`).
+- `gerador-mensagens` — serviço Java que publica mensagens no broker.
+- `consumidor-sentimento` — consumidor Java para processamento de imagens de rostos (contém `model.h5`).
+- `consumidor-times` — consumidor Java para identificação de brasões (contém embeddings/labels e `model.h5`).
+
+## Estrutura do repositório
+
+Arquivos e pastas relevantes:
+
+- `docker-compose.yml` — orquestração dos serviços.
+- `gerador-mensagens/` — Dockerfile, `Main.java`, `pom.xml`, bases em `database_face/` e `database_futebol/`.
+- `consumidor-sentimento/` — Dockerfile, `Main.java`, `pom.xml`, `model.h5`.
+- `consumidor-times/` — Dockerfile, `Main.java`, `pom.xml`, `futebol_embeddings.txt`, `futebol_labels.txt`, `model.h5`.
+- `rabbitmq-setup/` — `definitions.json` e `rabbitmq.conf` (opcional para pré-configuração).
+- `datasets_IA.ipynb`, `requirements.txt` — material adicional/experimentação.
+
+## Como executar
+
+Pré-requisitos:
+
+- Docker Engine
+- Docker Compose (comando `docker compose`) ou `docker-compose`
+
+Na raiz do projeto:
+
+```bash
+docker compose down
+docker compose up --build -d
+docker compose ps
+```
+
+Ver logs:
+
+```bash
+docker compose logs -f <service-name>
+```
+
+A interface do RabbitMQ fica em http://localhost:15672 (credenciais padrão definidas no `docker-compose.yml`: `admin`/`admin123`).
+
+## Parar os serviços
+
+```bash
+docker compose down
+```
+
+Ou parar containers do projeto por rótulo (exemplo):
+
+```bash
+docker stop $(docker ps -q --filter "label=com.docker.compose.project=trabalho_6_sd")
+```
+
+## Observações
+
+- Alguns arquivos grandes (modelos `.h5`, embeddings) já estão incluídos nas pastas dos consumidores.
+- Não há scripts `start.sh`/`iniciar_sistema.bat` no repositório — iniciar via `docker compose` é a forma suportada.
+
+## Próximos passos (opcionais)
+
+- Posso adicionar exemplos de como publicar mensagens em Java no README.
+- Posso criar scripts de conveniência (`start.sh`, `stop.sh`) se desejar.
+
+Se quiser que eu faça alguma dessas melhorias, diga qual e eu atualizo.
 # Sistema Distribuído de Análise de Imagens com IA REAL - Trabalho 6 SD
 
 Sistema distribuído em Java com containers Docker, RabbitMQ e **IA real embutida** nos consumidores para processamento e análise visual de imagens usando computer vision.
@@ -86,67 +157,77 @@ O sistema é composto por 4 containers principais:
 2. Aguarde o Docker estar completamente carregado
 3. Verifique se as portas 5672 e 15672 estão livres
 
-### Opção 1: Script Automatizado (Windows)
-```batch
-iniciar_sistema.bat
+# Subir e construir todos os serviços
+docker compose up --build -d
+
+# Parar e remover containers/recursos criados anteriormente pelo compose
+docker compose down
+
+# Verificar status
+docker compose ps
+
+# Ver logs (ex.: rabbitmq)
+docker compose logs -f rabbitmq
 ```
 
-### Opção 2: Script Automatizado (Linux/Mac)
+Observações:
+
+- A interface de administração do RabbitMQ ficará disponível em http://localhost:15672 (credenciais padrão no compose: `admin` / `admin123`).
+- As portas mapeadas estão definidas no `docker-compose.yml` (por padrão 5672 para AMQP e 15672 para a interface de administração).
+
+## Como parar os serviços
+
+Você pode remover os serviços com:
+
 ```bash
-chmod +x iniciar_sistema.sh
-./iniciar_sistema.sh
+docker compose down
 ```
 
-### Opção 3: Comandos Manuais
+Ou parar apenas os containers do projeto com:
+
 ```bash
-# 1. Criar imagens de teste (opcional)
-pip install pillow
-python criar_imagens_teste.py
-
-# 2. Iniciar sistema Docker
-docker-compose down
-docker-compose up --build
+docker stop $(docker ps -q --filter "label=com.docker.compose.project=trabalho_6_sd")
 ```
 
-## 📊 Monitoramento
+Caso queira parar manualmente por nome (nomes exibidos por `docker compose ps`):
 
-### Interface RabbitMQ
-- **URL**: http://localhost:15672
-- **Usuário**: admin
-- **Senha**: admin123
-
-### Logs dos Containers
 ```bash
-# Ver logs de todos os serviços
-docker-compose logs -f
-
-# Ver logs específicos
-docker-compose logs -f gerador-mensagens
-docker-compose logs -f consumidor-sentimento
-docker-compose logs -f consumidor-times
+docker stop gerador-mensagens consumidor-sentimento consumidor-times rabbitmq
 ```
 
-## 📈 Comportamento Esperado
+## Notas sobre o conteúdo dos serviços
 
-### 1. **Geração de Carga**
-- 6 mensagens por segundo
-- Alternância entre rostos (60%) e times (40%)
-- Mensagens com dados simulados de imagem
+- `consumidor-sentimento` e `consumidor-times` incluem artefatos (por exemplo `model.h5`, `futebol_embeddings.txt`) utilizados durante a execução. Esses arquivos já estão presentes nas respectivas pastas.
+- O gerador de mensagens é implementado em Java (`Main.java`) e utiliza RabbitMQ para publicar mensagens nas filas do broker.
 
-### 2. **Acúmulo nas Filas**
-- As filas devem crescer visivelmente no RabbitMQ Admin
-- Consumidores processam mais lentamente que a geração
-- Demonstra o conceito de backpressure
+## Arquivos de configuração importantes
 
-### 3. **Processamento com IA REAL**
-- **Sentimento**: Análise pixel-a-pixel das imagens + nome do arquivo
-- **Times**: Classificação por cores dominantes + padrões visuais reais
-- Ambos usam computer vision nativo do Java (sem bibliotecas externas)
+- `docker-compose.yml` — orquestração dos serviços, volumes e rede.
+- `rabbitmq-setup/definitions.json` — definições opcionais para pré-configurar exchanges/filas no RabbitMQ.
 
-### 4. **Logs Informativos com Análise Real**
+## Solução de problemas rápida
+
+- Se um serviço não inicia, verifique os logs:
+
+```bash
+docker compose logs -f <service-name>
 ```
-[SENTIMENTO] Processando: pessoa_feliz_1.jpg
-[SENTIMENTO] ✓ Resultado: FELIZ (89% confiança) (2.3s)
+
+- Se o RabbitMQ não aceitar conexões imediatamente, aguarde o healthcheck (alguns segundos) e verifique as variáveis de ambiente no `docker-compose.yml`.
+
+## Contribuição e autores
+
+Projeto mantido por Jonas. Use issues/pull requests para propor mudanças.
+
+---
+
+Se quiser, eu posso:
+
+- Incluir um exemplo mínimo de como publicar uma mensagem (trecho de Java) no README.
+- Adicionar scripts de inicialização (bash) para conveniência.
+- Gerar um pequeno diagrama atualizado.
+
+Diga o que prefere e eu atualizo.
 Análise Visual Real - Brilho: 0.72, Saturação: 0.65, Contraste: 0.41, Cores quentes: 45%
 
 [TIMES] Processando: logo_flamengo_1.jpg  
