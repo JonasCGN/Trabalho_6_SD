@@ -3,7 +3,82 @@
 Este repositório contém um exemplo didático de um sistema distribuído utilizando Java, Docker e RabbitMQ.
 O projeto possui um gerador de mensagens e dois consumidores que processam imagens (rostos e brasões de times).
 
-IMPORTANTE: o README foi atualizado para refletir a estrutura atual do repositório — referências a scripts ou arquivos inexistentes foram removidas.
+# Link do video do youtube
+
+[![Acessar o site](https://img.shields.io/badge/Assistir_no_YouTube-FF0000?style=for-the-badge&logo=youtube&logoColor=white)](https://youtu.be/mPvYbiSfJn4)
+
+Sistema distribuído em Java com containers Docker, RabbitMQ e **IA real embutida** nos consumidores para processamento e análise visual de imagens usando computer vision.
+
+## 🏗️ Arquitetura do Sistema
+
+O sistema é composto por 4 containers principais:
+
+```
+┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+│  Gerador de     │    │                 │    │ Consumidor      │
+│  Mensagens      │───▶│    RabbitMQ     │───▶│ Análise de     │
+│  (6 msgs/seg)   │    │                 │    │ Sentimento      │
+└─────────────────┘    │  Topic Exchange │    │                 │
+                       │                 │    └─────────────────┘
+                       │   face_queue    │
+                       │   team_queue    │    ┌─────────────────┐
+                       │                 │    │ Consumidor      │
+                       │                 │───▶│ Identificação  │
+                       └─────────────────┘    │ de Times        │
+                                              │                 │
+                                              └─────────────────┘
+```
+
+## 🚀 Componentes
+
+### 1. **Gerador de Mensagens**
+- **Função**: Gera carga constante de mensagens (6 mensagens/segundo)
+- **Tipos de Imagem**: 
+  - 60% rostos de pessoas (routing key: `face`)
+  - 40% brasões de times de futebol (routing key: `team`)
+- **Tecnologias**: Java 11, RabbitMQ Client, Jackson JSON
+
+### 2. **RabbitMQ Broker**
+- **Exchange**: Topic (`image_analysis_exchange`)
+- **Filas**: 
+  - `face_queue` (rostos)
+  - `team_queue` (times)
+- **Interface Admin**: http://localhost:15672 (admin/admin123)
+- **Configuração**: Pré-configurado com definições JSON
+
+### 3. **Consumidor de Análise de Sentimento (IA REAL)**
+- **Função**: Processa imagens de rostos com **análise visual real**
+- **IA**: Algoritmos de computer vision nativos em Java (BufferedImage, AWT)
+- **Análise Real**: 
+  - Brilho médio pixel-a-pixel
+  - Saturação de cores 
+  - Contraste e histograma
+  - Detecção de cores quentes (felicidade)
+- **Tempo**: 2-4 segundos por mensagem
+- **Saída**: FELIZ/TRISTE com características visuais detalhadas
+
+### 4. **Consumidor de Identificação de Times (IA REAL)**
+- **Função**: Identifica brasões através de **análise de cores dominantes**  
+- **IA**: Computer vision para extração de características reais
+- **Análise Real**:
+  - % pixels vermelhos, verdes, azuis
+  - % pixels pretos e brancos  
+  - Complexidade visual (variação de cores)
+  - Classificação por regras de cor
+- **Tempo**: 3-5 segundos por mensagem
+- **Base**: 8 times com regras de cores específicas
+- **Saída**: Nome do time com score de correspondência visual
+
+## 🛠️ Tecnologias Utilizadas
+
+- **Java 11** - Linguagem de programação
+- **Maven** - Gerenciamento de dependências  
+- **Docker & Docker Compose** - Containerização
+- **RabbitMQ** - Message Broker
+- **Java AWT/BufferedImage** - **Processamento real de imagem**
+- **Computer Vision** - **Algoritmos nativos de análise visual**
+- **Jackson** - Processamento JSON
+- **Python + Pillow** - Gerador de imagens de teste
 
 ## Serviços (definidos em `docker-compose.yml`)
 
@@ -71,79 +146,6 @@ docker stop $(docker ps -q --filter "label=com.docker.compose.project=trabalho_6
 Se quiser que eu faça alguma dessas melhorias, diga qual e eu atualizo.
 # Sistema Distribuído de Análise de Imagens com IA REAL - Trabalho 6 SD
 
-Sistema distribuído em Java com containers Docker, RabbitMQ e **IA real embutida** nos consumidores para processamento e análise visual de imagens usando computer vision.
-
-## 🏗️ Arquitetura do Sistema
-
-O sistema é composto por 4 containers principais:
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Gerador de     │    │                 │    │ Consumidor      │
-│  Mensagens      │───▶│    RabbitMQ     │───▶│ Análise de      │
-│  (6 msgs/seg)   │    │                 │    │ Sentimento      │
-└─────────────────┘    │  Topic Exchange │    │ (Smile ML)      │
-                       │                 │    └─────────────────┘
-                       │   face_queue    │
-                       │   team_queue    │    ┌─────────────────┐
-                       │                 │    │ Consumidor      │
-                       │                 │───▶│ Identificação   │
-                       └─────────────────┘    │ de Times        │
-                                              │ (Smile ML)      │
-                                              └─────────────────┘
-```
-
-## 🚀 Componentes
-
-### 1. **Gerador de Mensagens**
-- **Função**: Gera carga constante de mensagens (6 mensagens/segundo)
-- **Tipos de Imagem**: 
-  - 60% rostos de pessoas (routing key: `face`)
-  - 40% brasões de times de futebol (routing key: `team`)
-- **Tecnologias**: Java 11, RabbitMQ Client, Jackson JSON
-
-### 2. **RabbitMQ Broker**
-- **Exchange**: Topic (`image_analysis_exchange`)
-- **Filas**: 
-  - `face_queue` (rostos)
-  - `team_queue` (times)
-- **Interface Admin**: http://localhost:15672 (admin/admin123)
-- **Configuração**: Pré-configurado com definições JSON
-
-### 3. **Consumidor de Análise de Sentimento (IA REAL)**
-- **Função**: Processa imagens de rostos com **análise visual real**
-- **IA**: Algoritmos de computer vision nativos em Java (BufferedImage, AWT)
-- **Análise Real**: 
-  - Brilho médio pixel-a-pixel
-  - Saturação de cores 
-  - Contraste e histograma
-  - Detecção de cores quentes (felicidade)
-- **Tempo**: 2-4 segundos por mensagem
-- **Saída**: FELIZ/TRISTE com características visuais detalhadas
-
-### 4. **Consumidor de Identificação de Times (IA REAL)**
-- **Função**: Identifica brasões através de **análise de cores dominantes**  
-- **IA**: Computer vision para extração de características reais
-- **Análise Real**:
-  - % pixels vermelhos, verdes, azuis
-  - % pixels pretos e brancos  
-  - Complexidade visual (variação de cores)
-  - Classificação por regras de cor
-- **Tempo**: 3-5 segundos por mensagem
-- **Base**: 8 times com regras de cores específicas
-- **Saída**: Nome do time com score de correspondência visual
-
-## 🛠️ Tecnologias Utilizadas
-
-- **Java 11** - Linguagem de programação
-- **Maven** - Gerenciamento de dependências  
-- **Docker & Docker Compose** - Containerização
-- **RabbitMQ** - Message Broker
-- **Java AWT/BufferedImage** - **Processamento real de imagem**
-- **Computer Vision** - **Algoritmos nativos de análise visual**
-- **Jackson** - Processamento JSON
-- **Python + Pillow** - Gerador de imagens de teste
-
 ## 📋 Pré-requisitos
 
 - Docker Desktop instalado
@@ -158,15 +160,26 @@ O sistema é composto por 4 containers principais:
 3. Verifique se as portas 5672 e 15672 estão livres
 
 # Subir e construir todos os serviços
+
+```bash
 docker compose up --build -d
+```
 
 # Parar e remover containers/recursos criados anteriormente pelo compose
+
+```bash
 docker compose down
+```
 
 # Verificar status
+
+```bash
 docker compose ps
+```
 
 # Ver logs (ex.: rabbitmq)
+
+```bash
 docker compose logs -f rabbitmq
 ```
 
@@ -214,26 +227,6 @@ docker compose logs -f <service-name>
 ```
 
 - Se o RabbitMQ não aceitar conexões imediatamente, aguarde o healthcheck (alguns segundos) e verifique as variáveis de ambiente no `docker-compose.yml`.
-
-## Contribuição e autores
-
-Projeto mantido por Jonas. Use issues/pull requests para propor mudanças.
-
----
-
-Se quiser, eu posso:
-
-- Incluir um exemplo mínimo de como publicar uma mensagem (trecho de Java) no README.
-- Adicionar scripts de inicialização (bash) para conveniência.
-- Gerar um pequeno diagrama atualizado.
-
-Diga o que prefere e eu atualizo.
-Análise Visual Real - Brilho: 0.72, Saturação: 0.65, Contraste: 0.41, Cores quentes: 45%
-
-[TIMES] Processando: logo_flamengo_1.jpg  
-[TIMES] ⚽ Identificado: FLAMENGO - RJ (87% confiança) (4.1s)
-Classificação visual por cores - Score: 0.89 (R:67%, V:12%, A:8%)
-```
 
 ## 🔧 Configurações
 
@@ -310,7 +303,6 @@ sistema-carga-ia/
 - ✅ Routing keys adequadas (face/team)
 - ✅ Interface de administração habilitada
 - ✅ Processamento lento para visualizar acúmulo
-- ✅ IA embutida com biblioteca Smile
 - ✅ Network compartilhada entre containers
 
 ### Implementações de IA
@@ -326,10 +318,6 @@ sistema-carga-ia/
 - Classificação por similaridade usando distância euclidiana
 - Base de conhecimento de 10 times brasileiros
 - Cálculo de confiança baseado em score de similaridade
-
-## 👥 Autor
-
-Jonas - Sistemas Distribuídos - Trabalho 6
 
 ---
 
